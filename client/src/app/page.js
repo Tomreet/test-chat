@@ -228,7 +228,14 @@ export default function Home() {
 
   useEffect(() => { 
     if (currentUser) {
-      socket.current = io(process.env.NEXT_PUBLIC_SOCKET_URL);
+      socket.current = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
+        withCredentials: true,
+        transports: ["websocket"],
+        upgrade: false,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 3000,
+      });
       
       socket.current.on('message', (message) => {
         setChannels(prev => prev.map(channel => 
