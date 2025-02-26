@@ -149,3 +149,8 @@ server.listen(PORT, '0.0.0.0', () => {
   initFiles();
   console.log(`Server running on port ${PORT}`);
 });
+
+setInterval(() => {
+    fs.writeFileSync(path.join(__dirname, 'healthcheck'), 'OK');
+  }, 5000);
+});
