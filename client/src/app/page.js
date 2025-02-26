@@ -40,6 +40,17 @@ export default function Home() {
   const messagesEndRef = useRef(null);
   const currentUserRef = useRef();
 
+  useEffect(() => {
+  const savedUser = localStorage.getItem('currentUser');
+  if (savedUser) {
+    try {
+      setCurrentUser(JSON.parse(savedUser));
+    } catch (e) {
+      localStorage.removeItem('currentUser');
+    }
+  }
+}, []);
+
   // page.js
   socket.current = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
     withCredentials: true,
