@@ -6,45 +6,44 @@ const cors = require('cors');
 
 const app = express();
 const server = require('http').createServer(app);
-// Замените строку с портом
 const PORT = process.env.PORT || 3001;
 
-// Обновите CORS настройки
 const io = new Server(server, {
   cors: {
     origin: process.env.CLIENT_URL || "http://localhost:3000",
-    methods: ["GET", "POST", "PUT"]
+    methods: ["GET", "POST", "PUT"],
+    allowedHeaders: ['Content-Type', 'X-User-ID']
   }
 });
 
+const USERS_PATH = path.join(__dirname, 'users.json');
+const CHANNELS_PATH = path.join(__dirname, 'channels.json');
 
 const initFiles = () => {
-  const files = ['users.json', 'channels.json'];
-  files.forEach(file => {
-    if (!fs.existsSync(file)) {
-      fs.writeFileSync(file, '[]');
-      console.log(`Файл ${file} создан.`);
+  const files = [USERS_PATH, CHANNELS_PATH];
+  files.forEach(filePath => {
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, '[]');
+      console.log(`File ${path.basename(filePath)} created`);
     }
   });
 };
 
-const USERS_PATH = path.join(__dirname, './users.json');
-const CHANNELS_PATH = path.join(__dirname, './channels.json');
-
-// Middleware
 app.use(cors({
   origin: process.env.CLIENT_URL || "http://localhost:3000",
   methods: ["GET", "POST", "PUT"],
-  allowedHeaders: ['Content-Type', 'X-User-ID', 'Authorization']
+  allowedHeaders: ['Content-Type', 'X-User-ID', 'Authorization'],
+  credentials: true
 }));
 
-// Добавляем middleware для проверки аутентификации
+app.use(express.json());
+
 app.use((req, res, next) => {
   if (req.path.endsWith('.json') && req.method === 'GET') {
-      const userId = req.headers['x-user-id'];
-      if (!userId) {
-          return res.status(401).json({ error: 'Unauthorized' });
-      }
+    const userId = req.headers['x-user-id'];
+    if (!userId) {
+      return res.status(401).json({ error: 'Authorization header required' });
+    }
   }
   next();
 });
@@ -58,8 +57,6 @@ process.on('unhandledRejection', (err) => {
   console.error('Unhandled Rejection:', err);
   process.exit(1);
 });
-
-app.use(express.json());
 
 const readJSONFile = (filePath) => {
   try {
@@ -77,7 +74,7 @@ const writeJSONFile = (filePath, data) => {
   }
 };
 
-// Маршруты для работы с users.json
+// Users endpoints
 app.get('/users.json', (req, res) => {
   const users = readJSONFile(USERS_PATH);
   res.json(users);
@@ -93,7 +90,7 @@ app.put('/users.json', (req, res) => {
   res.status(204).send();
 });
 
-// Маршруты для работы с channels.json
+// Channels endpoints
 app.get('/channels.json', (req, res) => {
   const channels = readJSONFile(CHANNELS_PATH);
   res.json(channels);
@@ -115,7 +112,7 @@ io.on('connection', (socket) => {
 
   socket.on('message', (data) => {
     socket.broadcast.emit('message', data);
-
+    
     const channels = readJSONFile(CHANNELS_PATH);
     const updatedChannels = channels.map(channel => {
       if (channel.id === data.channelId) {
@@ -136,8 +133,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// Запуск сервера
-// В server.js после создания сервера
 server.listen(PORT, '0.0.0.0', () => {
   initFiles();
   console.log(`Server running on port ${PORT}`);
