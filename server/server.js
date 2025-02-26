@@ -20,11 +20,10 @@ const USERS_PATH = path.join(__dirname, 'users.json');
 const CHANNELS_PATH = path.join(__dirname, 'channels.json');
 
 const initFiles = () => {
-  const files = [USERS_PATH, CHANNELS_PATH];
-  files.forEach(filePath => {
+  [USERS_PATH, CHANNELS_PATH].forEach(filePath => {
     if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, '[]');
-      console.log(`File ${path.basename(filePath)} created`);
+      fs.writeFileSync(filePath, '[]', 'utf8');
+      console.log('Created file:', path.basename(filePath));
     }
   });
 };
