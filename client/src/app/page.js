@@ -13,13 +13,6 @@ import MyBackground from '../components/UI/MyBackground.jsx';
 
 export default function Home() {
   const [currentUser, setCurrentUser] = useState(null);
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
-    }
-  }, []);
   const [authView, setAuthView] = useState('login');
   const [users, setUsers] = useState([]);
   const [channels, setChannels] = useState([]);
@@ -36,9 +29,100 @@ export default function Home() {
     description: '',
     avatar: ''
   });
+  
   const socket = useRef(null);
   const messagesEndRef = useRef(null);
   const currentUserRef = useRef();
+
+  // Инициализация пользователя с проверкой ошибок
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+          const parsedUser = JSON.parse(savedUser);
+          // Проверяем обязательные поля
+          if (parsedUser?.id && parsedUser?.name) {
+            setCurrentUser(parsedUser);
+          } else {
+            localStorage.removeItem('currentUser');
+          }
+        }
+      } catch (e) {
+        console.error('Error loading user:', e);
+        localStorage.removeItem('currentUser');
+      }
+    };
+    loadUser();
+  }, []);
+
+  // Инициализация данных с обработкой ошибок
+  useEffect(() => {
+    const initializeData = async () => {
+      if (currentUser) {
+        try {
+          const [usersData, channelsData] = await Promise.all([
+            loadUsers().catch(e => {
+              console.error('Failed to load users:', e);
+              return [];
+            }),
+            loadChannels().catch(e => {
+              console.error('Failed to load channels:', e);
+              return [];
+            })
+          ]);
+          
+          if (Array.isArray(usersData)) setUsers(usersData);
+          if (Array.isArray(channelsData)) setChannels(channelsData);
+          
+        } catch (error) {
+          console.error('Initialization error:', error);
+        }
+      }
+    };
+    initializeData();
+  }, [currentUser]);
+
+  // WebSocket соединение с улучшенной обработкой
+  useEffect(() => { 
+    if (currentUser) {
+      // Новые настройки подключения
+      socket.current = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
+        withCredentials: true,
+        transports: ['websocket'],
+        auth: {
+          userId: currentUser.id,
+          token: currentUser.token
+        }
+      });
+
+      socket.current.on('connect_error', (err) => {
+        console.error('Connection error:', err);
+      });
+
+      socket.current.on('users-updated', (updatedUsers) => {
+        if (Array.isArray(updatedUsers)) setUsers(updatedUsers);
+      });
+
+      socket.current.on('channels-updated', (updatedChannels) => {
+        if (Array.isArray(updatedChannels)) setChannels(updatedChannels);
+      });
+
+      return () => {
+        if (socket.current) {
+          socket.current.off('connect_error');
+          socket.current.disconnect();
+        }
+      };
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+      setCurrentUser(JSON.parse(savedUser));
+    }
+  }, []);
 
   useEffect(() => {
   const savedUser = localStorage.getItem('currentUser');
