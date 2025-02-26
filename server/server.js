@@ -41,9 +41,10 @@ app.use(express.json());
 app.use((req, res, next) => {
   if (req.path.endsWith('.json') && req.method === 'GET') {
     const userId = req.headers['x-user-id'];
-    if (!userId) {
-      return res.status(401).json({ error: 'Authorization header required' });
-    }
+
+    // if (!userId) {
+    //   return res.status(401).json({ error: 'Authorization header required' });
+    // }
   }
   next();
 });
