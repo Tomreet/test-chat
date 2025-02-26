@@ -36,6 +36,18 @@ app.use(cors({
   credentials: true
 }));
 
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self' https: 'unsafe-inline' 'unsafe-eval';" +
+    "style-src 'self' https: 'unsafe-inline';" +
+    "img-src 'self' https: data:;" +
+    "font-src 'self' https: data:;" +
+    "connect-src 'self' https: ws: wss:;"
+  );
+  next();
+});
+
 app.use(express.json());
 
 app.use((req, res, next) => {
