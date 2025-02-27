@@ -19,6 +19,7 @@ const io = new Server(server, {
 const USERS_PATH = path.join(__dirname, 'users.json');
 const CHANNELS_PATH = path.join(__dirname, 'channels.json');
 
+// Инициализация файлов, если они не существуют
 const initFiles = () => {
   const files = [USERS_PATH, CHANNELS_PATH];
   files.forEach(filePath => {
@@ -29,6 +30,7 @@ const initFiles = () => {
   });
 };
 
+// Middleware
 app.use(cors({
   origin: process.env.CLIENT_URL || "http://localhost:3000",
   methods: ["GET", "POST", "PUT"],
@@ -38,16 +40,18 @@ app.use(cors({
 
 app.use(express.json());
 
+// Проверка авторизации для JSON-файлов
 app.use((req, res, next) => {
   if (req.path.endsWith('.json') && req.method === 'GET') {
     const userId = req.headers['x-user-id'];
     if (!userId) {
-      return res.status(401).json({ error: 'Authorization header required' });
+      return res.status(401).json({ error: 'X-User-ID header required' });
     }
   }
   next();
 });
 
+// Обработка необработанных исключений
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
   process.exit(1);
@@ -58,51 +62,72 @@ process.on('unhandledRejection', (err) => {
   process.exit(1);
 });
 
+// Функции для работы с JSON-файлами
 const readJSONFile = (filePath) => {
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const data = fs.readFileSync(filePath, 'utf8');
+    console.log(`Reading ${path.basename(filePath)}:`, data.slice(0, 50));
+    return JSON.parse(data);
   } catch (error) {
+    console.error(`Error reading ${path.basename(filePath)}:`, error);
     return [];
   }
 };
 
 const writeJSONFile = (filePath, data) => {
   try {
+    console.log(`Writing to ${path.basename(filePath)}:`, data.slice(0, 50));
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    return true;
   } catch (error) {
-    console.error(`Error writing to ${filePath}:`, error);
+    console.error(`Error writing to ${path.basename(filePath)}:`, error);
+    return false;
   }
 };
 
-// Users endpoints
+// Валидация данных пользователей
+const validateUsers = (users) => {
+  return Array.isArray(users) && users.every(user => 
+    user.id && typeof user.id === 'number' &&
+    user.name && typeof user.name === 'string'
+  );
+};
+
+// Валидация данных каналов
+const validateChannels = (channels) => {
+  return Array.isArray(channels) && channels.every(channel =>
+    channel.id && typeof channel.id === 'number' &&
+    channel.name && typeof channel.name === 'string'
+  );
+};
+
+// Endpoints для пользователей
 app.get('/users.json', (req, res) => {
   const users = readJSONFile(USERS_PATH);
   res.json(users);
 });
 
 app.put('/users.json', (req, res) => {
-  const updatedUsers = req.body;
-  if (!Array.isArray(updatedUsers)) {
-    return res.status(400).send('Invalid data format');
+  if (!validateUsers(req.body)) {
+    return res.status(400).json({ error: 'Invalid user data structure' });
   }
-  writeJSONFile(USERS_PATH, updatedUsers);
-  io.emit('users-updated', updatedUsers);
+  writeJSONFile(USERS_PATH, req.body);
+  io.emit('users-updated', req.body);
   res.status(204).send();
 });
 
-// Channels endpoints
+// Endpoints для каналов
 app.get('/channels.json', (req, res) => {
   const channels = readJSONFile(CHANNELS_PATH);
   res.json(channels);
 });
 
 app.put('/channels.json', (req, res) => {
-  const updatedChannels = req.body;
-  if (!Array.isArray(updatedChannels)) {
-    return res.status(400).send('Invalid data format');
+  if (!validateChannels(req.body)) {
+    return res.status(400).json({ error: 'Invalid channel data structure' });
   }
-  writeJSONFile(CHANNELS_PATH, updatedChannels);
-  io.emit('channels-updated', updatedChannels);
+  writeJSONFile(CHANNELS_PATH, req.body);
+  io.emit('channels-updated', req.body);
   res.status(204).send();
 });
 
@@ -133,6 +158,7 @@ io.on('connection', (socket) => {
   });
 });
 
+// Запуск сервера
 server.listen(PORT, '0.0.0.0', () => {
   initFiles();
   console.log(`Server running on port ${PORT}`);
