@@ -2,10 +2,14 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 const getAuthHeader = () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-  return currentUser ? { 
+  if (!currentUser) {
+    console.error('No current user found');
+    return {};
+  }
+  return { 
     'X-User-ID': currentUser.id.toString(),
     'Authorization': `Bearer ${currentUser.token || ''}`
-  } : {};
+  };
 };
 
 export const loadUsers = async () => {
