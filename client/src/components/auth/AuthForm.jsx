@@ -1,109 +1,81 @@
-// AuthForm.jsx
-import React, { useState } from 'react';
+import React from 'react';
 import MyButton from '../UI/MyButton';
 import { Eye, EyeClosed } from 'lucide-react';
 
-const AuthForm = ({ onLogin, switchToRegister, loadUsers }) => {
-  const [credentials, setCredentials] = useState({ 
-    name: '', 
-    password: '' 
-  });
+const AuthForm = ({ onLogin, switchToRegister, useState, loadUsers}) => {
+  const [credentials, setCredentials] = useState({ name: '', password: '' });
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    
     if (!credentials.name.trim() || !credentials.password.trim()) {
       setError('All fields are required');
       return;
     }
 
     try {
-      setIsLoading(true);
       const users = await loadUsers();
-      
-      // Добавляем базовую валидацию
       const user = users.find(u => 
-        u.name.toLowerCase() === credentials.name.trim().toLowerCase() && 
-        u.password === credentials.password
+        u.name === credentials.name && u.password === credentials.password
       );
 
       if (user) {
-        const userWithToken = {
-          ...user,
-          token: crypto.randomUUID() // Генерация временного токена
-        };
-        localStorage.setItem('currentUser', JSON.stringify(userWithToken));
-        onLogin(userWithToken);
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        onLogin(user);
       } else {
-        setError('Invalid username or password');
+        setError('Incorrect data');
       }
     } catch (error) {
       console.error('Authorization error:', error);
-      setError('Server connection error');
-    } finally {
-      setIsLoading(false);
+      setError('Authorization error');
     }
   };
 
   return (
     <div className="MyBackground">
+      <div className="Left"></div>
+      <div className="Right"></div>
       <div className="auth-container">
         <form onSubmit={handleSubmit}>
           <h2>Login</h2>
-          <div className="input-group">
-            <input
-              type="text"
-              placeholder="Username"
-              value={credentials.name}
-              onChange={(e) => {
-                setCredentials(prev => ({...prev, name: e.target.value}));
-                setError('');
-              }}
-              required
-              disabled={isLoading}
-            />
-          </div>
-          
-          <div className="input-group password-input">
-            <input
-              placeholder="Password"
-              type={showPassword ? "text" : "password"}
-              value={credentials.password}
-              onChange={(e) => {
-                setCredentials(prev => ({...prev, password: e.target.value}));
-                setError('');
-              }}
-              required
-              disabled={isLoading}
-            />
-            <MyButton
-              type="button"
-              className="toggle-password"
-              onClick={() => setShowPassword(!showPassword)}
-              icon={showPassword ? <EyeClosed /> : <Eye />}
-              disabled={isLoading}
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="Name"
+            value={credentials.name}
+            onChange={(e) => setCredentials({ ...credentials, name: e.target.value })}
+            required
+          />
+          <>
+          <input
+            placeholder="Password"
+            type={showPassword ? "text" : "password"}
+            value={credentials.password}
+            onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+            required
+          />
 
-          {error && <div className="error-message">{error}</div>}
-
-          <button 
-            type="submit" 
-            disabled={isLoading}
-          >
-            {isLoading ? 'Processing...' : 'Login'}
-          </button>
-          
-          <button
+          <MyButton
             type="button"
-            onClick={switchToRegister}
-            disabled={isLoading}
-          >
-            Create Account
+            style={{
+              position: 'absolute',
+              right: '10px',
+              top: '63.5%',
+              left: '65%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '16px'
+            }}
+            onClick={() => setShowPassword(!showPassword)}
+            icon={showPassword ? <EyeClosed strokeWidth="1"/> : <Eye strokeWidth="1"/>}
+          />
+          </>
+          {error && <div className="error">{error}</div>}
+          <button type="submit">Login</button>
+          <button type="button" onClick={switchToRegister}>
+            Register
           </button>
         </form>
       </div>
