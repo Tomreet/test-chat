@@ -103,6 +103,13 @@ const validateChannels = (channels) => {
 
 // Endpoints для пользователей
 app.get('/users.json', (req, res) => {
+  console.log('Request headers:', req.headers);
+
+  const userId = req.headers['x-user-id'];
+  if (!userId) {
+    return res.status(401).json({ error: 'X-User-ID header required' });
+  }
+
   const users = readJSONFile(USERS_PATH);
   res.json(users);
 });
