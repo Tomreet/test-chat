@@ -10,17 +10,30 @@ const getAuthHeader = () => {
 
 export const loadUsers = async () => {
   try {
+    const headers = getAuthHeader();
+    console.log('Request headers:', headers);
+
     const response = await fetch(`${API_BASE_URL}/users.json`, {
-      headers: getAuthHeader()
+      headers: headers
     });
 
-    if (!response.ok) {
-      throw new Error(`Ошибка загрузки: ${response.status}`);
+    if (response.status === 401) {
+      localStorage.removeItem('currentUser');
+      window.location.reload();
+      return [];
     }
 
-    return await response.json();
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!Array.isArray(data)) {
+      throw new Error('Received invalid users data format');
+    }
+    return data;
   } catch (error) {
-    console.error('Ошибка загрузки пользователей:', error);
+    console.error('Error loading users:', error);
     return [];
   }
 };
