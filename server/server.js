@@ -20,10 +20,11 @@ const USERS_PATH = path.join(__dirname, 'users.json');
 const CHANNELS_PATH = path.join(__dirname, 'channels.json');
 
 const initFiles = () => {
-  [USERS_PATH, CHANNELS_PATH].forEach(filePath => {
+  const files = [USERS_PATH, CHANNELS_PATH];
+  files.forEach(filePath => {
     if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, '[]', 'utf8');
-      console.log('Created file:', path.basename(filePath));
+      fs.writeFileSync(filePath, '[]');
+      console.log(`File ${path.basename(filePath)} created`);
     }
   });
 };
@@ -35,27 +36,14 @@ app.use(cors({
   credentials: true
 }));
 
-app.use((req, res, next) => {
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'self' https: 'unsafe-inline' 'unsafe-eval';" +
-    "style-src 'self' https: 'unsafe-inline';" +
-    "img-src 'self' https: data:;" +
-    "font-src 'self' https: data:;" +
-    "connect-src 'self' https: ws: wss:;"
-  );
-  next();
-});
-
 app.use(express.json());
 
 app.use((req, res, next) => {
   if (req.path.endsWith('.json') && req.method === 'GET') {
     const userId = req.headers['x-user-id'];
-
-    // if (!userId) {
-    //   return res.status(401).json({ error: 'Authorization header required' });
-    // }
+    if (!userId) {
+      return res.status(401).json({ error: 'Authorization header required' });
+    }
   }
   next();
 });
@@ -148,9 +136,4 @@ io.on('connection', (socket) => {
 server.listen(PORT, '0.0.0.0', () => {
   initFiles();
   console.log(`Server running on port ${PORT}`);
-});
-
-setInterval(() => {
-    fs.writeFileSync(path.join(__dirname, 'healthcheck'), 'OK');
-  }, 5000);
 });
